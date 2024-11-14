@@ -2,6 +2,7 @@
 --https://www.youtube.com/watch?v=pitjnqRKyyI&list=PLe7Ei6viL6jGp1Rfu0dil1JH1SHk9bgDV&index=2
 --https://www.youtube.com/watch?v=unh6aK8WMwM&t=1179s
 --https://github.com/penteract/HigherOrderHornRefinement/tree/master/HOCHC
+--https://github.com/reiddraper/haskell-logic/blob/master/logic.hs
 
 import Data.List (isPrefixOf)
 --tipos de tokens
