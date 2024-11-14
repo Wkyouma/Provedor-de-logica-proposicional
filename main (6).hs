@@ -121,35 +121,35 @@ evalExpr vars = eval []
     eval _ _ = error "Expressão inválida"
 -- Tipo de dado para representar expressões proposicionais
 data Proposicao
-  = PVar Char
-  | PBool Bool
-  | PNao Proposicao
-  | PConj Proposicao Proposicao
-  | PDisj Proposicao Proposicao
-  | PImpli Proposicao Proposicao
-  | PBiCon Proposicao Proposicao
+  = PropVar Char
+  | PropBool Bool
+  | PropNot Proposicao
+  | PropAnd Proposicao Proposicao
+  | PropOr Proposicao Proposicao
+  | PropImpl Proposicao Proposicao
+  | PropBic Proposicao Proposicao
   deriving (Eq, Show)
 
 -- Eliminar implicações e bicondicionais
 transImplic :: Proposicao -> Proposicao
-transImplic (PVar x) = PVar x
-transImplic (PBool b) = PBool b
-transImplic (PNao x) = PNao (transImplic x)
-transImplic (PConj x y) = PConj (transImplic x) (transImplic y)
-transImplic (PDisj x y) = PDisj (transImplic x) (transImplic y)
-transImplic (PImpli x y) = PDisj (PNao (transImplic x)) (transImplic y)
-transImplic (PBiCon x y) = PConj (transImplic (PImpli x y)) (transImplic (PImpli y x))
+transImplic (PropVar x) = PropVar x
+transImplic (PropBool b) = PropBool b
+transImplic (PropNot x) = PropNot (transImplic x)
+transImplic (PropAnd x y) = PropAnd (transImplic x) (transImplic y)
+transImplic (PropOr x y) = PropOr (transImplic x) (transImplic y)
+transImplic (PropImpl x y) = PropOr (PropNot (transImplic x)) (transImplic y)
+transImplic (PropBic x y) = PropAnd (transImplic (PropImpl x y)) (transImplic (PropImpl y x))
 
 -- Mover negações para dentro e simplificar dupla negação
 transNeg :: Proposicao -> Proposicao
-transNeg (PVar x) = PVar x
-transNeg (PBool b) = PBool b
-transNeg (PNao (PNao x)) = transNeg x  -- Elimina dupla negação
-transNeg (PNao (PConj x y)) = PDisj (transNeg (PNao x)) (transNeg (PNao y))  -- De Morgan
-transNeg (PNao (PDisj x y)) = PConj (transNeg (PNao x)) (transNeg (PNao y))  -- De Morgan
-transNeg (PNao x) = PNao (transNeg x)
-transNeg (PConj x y) = PConj (transNeg x) (transNeg y)
-transNeg (PDisj x y) = PDisj (transNeg x) (transNeg y)
+transNeg (PropVar x) = PropVar x
+transNeg (PropBool b) = PropBool b
+transNeg (PropNot (PropNot x)) = transNeg x  -- Elimina dupla negação
+transNeg (PropNot (PropAnd x y)) = PropOr (transNeg (PropNot x)) (transNeg (PropNot y))  -- De Morgan
+transNeg (PropNot (PropOr x y)) = PropAnd (transNeg (PropNot x)) (transNeg (PropNot y))  -- De Morgan
+transNeg (PropNot x) = PropNot (transNeg x)
+transNeg (PropAnd x y) = PropAnd (transNeg x) (transNeg y)
+transNeg (PropOr x y) = PropOr (transNeg x) (transNeg y)
 -- Distribuir disjunções sobre conjunções para obter a FNC
 distributivaProp :: Proposicao -> Proposicao
 distributivaProp p =
@@ -158,13 +158,13 @@ distributivaProp p =
 
 -- Distribuição parcial das disjunções sobre conjunções
 distribDisj :: Proposicao -> Proposicao
-distribDisj (PConj x y) = PConj (distribDisj x) (distribDisj y)
-distribDisj (PDisj (PConj x y) z) = PConj (distribDisj (PDisj x z)) (distribDisj (PDisj y z))
-distribDisj (PDisj z (PConj x y)) = PConj (distribDisj (PDisj z x)) (distribDisj (PDisj z y))
-distribDisj (PDisj x y) = PDisj (distribDisj x) (distribDisj y)
-distribDisj (PNao x) = PNao (distribDisj x)
-distribDisj (PVar x) = PVar x
-distribDisj (PBool x) = PBool x
+distribDisj (PropAnd x y) = PropAnd (distribDisj x) (distribDisj y)
+distribDisj (PropOr (PropAnd x y) z) = PropAnd (distribDisj (PropOr x z)) (distribDisj (PropOr y z))
+distribDisj (PropOr z (PropAnd x y)) = PropAnd (distribDisj (PropOr z x)) (distribDisj (PropOr z y))
+distribDisj (PropOr x y) = PropOr (distribDisj x) (distribDisj y)
+distribDisj (PropNot x) = PropNot (distribDisj x)
+distribDisj (PropVar x) = PropVar x
+distribDisj (PropBool x) = PropBool x
 
 -- Função principal para converter uma expressão para FNC
 converterParaFNC :: Proposicao -> Proposicao
@@ -174,30 +174,30 @@ parseRPN :: [Token] -> Proposicao
 parseRPN = parse []
   where
     parse [result] [] = result
-    parse stack (Var v : xs) = parse (PVar v : stack) xs
-    parse stack (Booleano b : xs) = parse (PBool b : stack) xs
-    parse (x : xs) (Not : rest) = parse (PNao x : xs) rest
-    parse (y : x : xs) (And : rest) = parse (PConj x y : xs) rest
-    parse (y : x : xs) (Or : rest) = parse (PDisj x y : xs) rest
-    parse (y : x : xs) (Implication : rest) = parse (PImpli x y : xs) rest
-    parse (y : x : xs) (Biconditional : rest) = parse (PBiCon x y : xs) rest
+    parse stack (Var v : xs) = parse (PropVar v : stack) xs
+    parse stack (Booleano b : xs) = parse (PropBool b : stack) xs
+    parse (x : xs) (Not : rest) = parse (PropNot x : xs) rest
+    parse (y : x : xs) (And : rest) = parse (PropAnd x y : xs) rest
+    parse (y : x : xs) (Or : rest) = parse (PropOr x y : xs) rest
+    parse (y : x : xs) (Implication : rest) = parse (PropImpl x y : xs) rest
+    parse (y : x : xs) (Biconditional : rest) = parse (PropBic x y : xs) rest
     parse _ _ = error "Expressão inválida para conversão em Proposicao"
     
 -- Função para verificar se uma disjunção é uma cláusula de Horn
 posiClausulaHorn :: Proposicao -> Bool
-posiClausulaHorn (PDisj x y) = numPosi (PDisj x y) <= 1
+posiClausulaHorn (PropOr x y) = numPosi (PropOr x y) <= 1
 posiClausulaHorn x = True  -- Um único literal é sempre uma cláusula de Horn
 
 -- Contagem de literais positivos em uma expressão
 numPosi:: Proposicao -> Int
-numPosi (PVar _) = 1
-numPosi (PNao _) = 0
-numPosi (PDisj x y) = numPosi x + numPosi y
+numPosi (PropVar _) = 1
+numPosi (PropNot _) = 0
+numPosi (PropOr x y) = numPosi x + numPosi y
 numPosi _ = 0
 
 -- Separar as cláusulas da FNC
 extrairClausulas :: Proposicao -> [Proposicao]
-extrairClausulas (PConj x y) = extrairClausulas x ++ extrairClausulas y
+extrairClausulas (PropAnd x y) = extrairClausulas x ++ extrairClausulas y
 extrairClausulas clausula = [clausula]
 
 -- Exibir as cláusulas de Horn ou informar se não for possível
@@ -216,14 +216,14 @@ printSeparator :: Char -> Int -> IO ()
 printSeparator c n = putStrLn (replicate n c)
 -- Função auxiliar para converter expressão Proposicao para LaTeX e terminal
 toLatex :: Proposicao -> String
-toLatex (PVar x) = [x]
-toLatex (PBool True) = "true"
-toLatex (PBool False) = "false"
-toLatex (PNao x) = "\\neg " ++ toLatex x
-toLatex (PConj x y) = "(" ++ toLatex x ++ " \\land " ++ toLatex y ++ ")"
-toLatex (PDisj x y) = "(" ++ toLatex x ++ " \\lor " ++ toLatex y ++ ")"
-toLatex (PImpli x y) = "(" ++ toLatex x ++ " \\to " ++ toLatex y ++ ")"
-toLatex (PBiCon x y) = "(" ++ toLatex x ++ " \\leftrightarrow " ++ toLatex y ++ ")"
+toLatex (PropVar x) = [x]
+toLatex (PropBool True) = "true"
+toLatex (PropBool False) = "false"
+toLatex (PropNot x) = "\\neg " ++ toLatex x
+toLatex (PropAnd x y) = "(" ++ toLatex x ++ " \\land " ++ toLatex y ++ ")"
+toLatex (PropOr x y) = "(" ++ toLatex x ++ " \\lor " ++ toLatex y ++ ")"
+toLatex (PropImpl x y) = "(" ++ toLatex x ++ " \\to " ++ toLatex y ++ ")"
+toLatex (PropBic x y) = "(" ++ toLatex x ++ " \\leftrightarrow " ++ toLatex y ++ ")"
 
 -- Função para exibir a expressão em LaTeX e no terminal
 printLaTeX :: String -> Proposicao -> IO ()
@@ -233,11 +233,38 @@ printLaTeX msg expr = do
 
 main :: IO ()
 main = do
-    let str = "P v (Q ^~Q) <-> P"
-    let lexado = tokenize  str
-    putStrLn $ "Tokens: " ++ show lexado
+   
+    putStrLn "\n┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
+    putStrLn "┃          📝 Entradas Aceitas             ┃"
+    putStrLn "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"
+    putStrLn ""
+    putStrLn "  🔵  Parênteses:                         "
+    putStrLn "    ➤ (     - Parêntese esquerdo        "
+    putStrLn "    ➤ )     - Parêntese direito         "
+    putStrLn ""
+    putStrLn "  🔵 Operadores Lógicos:                "
+    putStrLn "    ➤ v, ∨  - Operador OR              "
+    putStrLn "    ➤ ou, or, \\lor  - Operador OR     "
+    putStrLn "    ➤ ^, ∧  - Operador AND             "
+    putStrLn "    ➤ e, and, \\land  - Operador AND   "
+    putStrLn "    ➤ ~, ¬, not, \\neg  - Operador NOT "
+    putStrLn "    ➤ ->, =>, \\to  - Implicação       "
+    putStrLn "    ➤ →     - Implicação               "
+    putStrLn "    ➤ <->, <=>, \\iff  - Bicondicional "
+    putStrLn "    ➤ ↔     - Bicondicional            "
+    putStrLn ""
+    putStrLn "  🔵  Variáveis:                         "
+    putStrLn "    ➤ [A-Z] - Variáveis (ex.: A, B, C, ...)"
+    putStrLn ""
+    putStrLn "  ⚠️ Observações:                      "
+    putStrLn "    ➤ Espaços em branco e tabulações são ignorados"
+    putStrLn "    ➤ Qualquer outro caractere resultará em erro"
+    --let str = "(P ^ Q)^ ~(P v Q)"  
+    str <- getLine
+    let tokenizado = tokenize  str
+    putStrLn $ "Tokens: " ++ show tokenizado
     printSeparator '=' 100
-    let rpn = ordenar lexado [] []
+    let rpn = ordenar tokenizado [] []
     putStrLn $ "Notacaoo Pos-Fixa (RPN): " ++ show rpn
     putStrLn $ "Classificação da expressão: " ++ classificar str
     printSeparator '=' 100
