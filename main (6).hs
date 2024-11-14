@@ -1,3 +1,8 @@
+--referências:
+--https://www.youtube.com/watch?v=pitjnqRKyyI&list=PLe7Ei6viL6jGp1Rfu0dil1JH1SHk9bgDV&index=2
+--https://www.youtube.com/watch?v=unh6aK8WMwM&t=1179s
+--https://github.com/penteract/HigherOrderHornRefinement/tree/master/HOCHC
+
 import Data.List (isPrefixOf)
 --tipos de tokens
 data Token
@@ -52,7 +57,6 @@ valor Biconditional = 1
 valor LeftParen = 0
 valor RightParen = 0
 
--- Função para converter expressão infixa para notação pós-fixa (RPN)
 ordenar :: [Token] -> [Token] -> [Token] -> [Token]
 ordenar [] [] o = o
 ordenar [] (LeftParen : _) _ = error "Parêntese aberto sem fechamento"
