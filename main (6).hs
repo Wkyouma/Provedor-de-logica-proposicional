@@ -1,4 +1,4 @@
-
+import Data.List (isPrefixOf)
 --tipos de tokens
 data Token
   = Var Char
@@ -16,44 +16,41 @@ data Token
 tokenize  :: String -> [Token]
 tokenize  [] = []
 tokenize  x
-  | "(" `prefixOf` x = LeftParen : tokenize  (drop 1 x)
-  | ")" `prefixOf` x = RightParen : tokenize  (drop 1 x)
-  | "v" `prefixOf` x || "∨" `prefixOf` x = Or : tokenize  (drop 1 x)
-  | "ou" `prefixOf` x || "or" `prefixOf` x = Or : tokenize  (drop 2 x)
-  | "\\lor" `prefixOf` x = Or : tokenize  (drop 4 x)
-  | "^" `prefixOf` x || "∧" `prefixOf` x = And : tokenize  (drop 1 x)
-  | "e" `prefixOf` x || "and" `prefixOf` x = And : tokenize  (drop 3 x)
-  | "\\land" `prefixOf` x = And : tokenize  (drop 5 x)
-  | "~" `prefixOf` x || "¬" `prefixOf` x = Not : tokenize  (drop 1 x)
-  | "not" `prefixOf` x = Not : tokenize  (drop 3 x)
-  | "\\neg" `prefixOf` x = Not : tokenize  (drop 4 x)
-  | "¬" `prefixOf` x = Not : tokenize  (drop 1 x)
-  | "->" `prefixOf` x || "=>" `prefixOf` x = Implication : tokenize  (drop 2 x)
-  | "→" `prefixOf` x = Implication : tokenize  (drop 1 x)
-  | "\\to" `prefixOf` x = Implication : tokenize  (drop 3 x)
-  | "<->" `prefixOf` x || "<=>" `prefixOf` x = Biconditional : tokenize  (drop 3 x)
-  | "↔" `prefixOf` x = Biconditional : tokenize  (drop 1 x)
-  | "\\iff" `prefixOf` x = Biconditional : tokenize  (drop 4 x)
-  | "true" `prefixOf` x = Booleano True : tokenize  (drop 4 x)
-  | "false" `prefixOf` x = Booleano False : tokenize  (drop 5 x)
+  | "(" `isPrefixOf` x = LeftParen : tokenize  (drop 1 x)
+  | ")" `isPrefixOf` x = RightParen : tokenize  (drop 1 x)
+  | "v" `isPrefixOf` x || "∨" `isPrefixOf` x = Or : tokenize  (drop 1 x)
+  | "ou" `isPrefixOf` x || "or" `isPrefixOf` x = Or : tokenize  (drop 2 x)
+  | "\\lor" `isPrefixOf` x = Or : tokenize  (drop 4 x)
+  | "^" `isPrefixOf` x || "∧" `isPrefixOf` x = And : tokenize  (drop 1 x)
+  | "e" `isPrefixOf` x || "and" `isPrefixOf` x = And : tokenize  (drop 3 x)
+  | "\\land" `isPrefixOf` x = And : tokenize  (drop 5 x)
+  | "~" `isPrefixOf` x || "¬" `isPrefixOf` x = Not : tokenize  (drop 1 x)
+  | "not" `isPrefixOf` x = Not : tokenize  (drop 3 x)
+  | "\\neg" `isPrefixOf` x = Not : tokenize  (drop 4 x)
+  | "¬" `isPrefixOf` x = Not : tokenize  (drop 1 x)
+  | "->" `isPrefixOf` x || "=>" `isPrefixOf` x = Implication : tokenize  (drop 2 x)
+  | "→" `isPrefixOf` x = Implication : tokenize  (drop 1 x)
+  | "\\to" `isPrefixOf` x = Implication : tokenize  (drop 3 x)
+  | "<->" `isPrefixOf` x || "<=>" `isPrefixOf` x = Biconditional : tokenize  (drop 3 x)
+  | "↔" `isPrefixOf` x = Biconditional : tokenize  (drop 1 x)
+  | "\\iff" `isPrefixOf` x = Biconditional : tokenize  (drop 4 x)
+  | "true" `isPrefixOf` x = Booleano True : tokenize  (drop 4 x)
+  | "false" `isPrefixOf` x = Booleano False : tokenize  (drop 5 x)
   | head x `elem` ['A' .. 'Z'] = Var (head x) : tokenize  (drop 1 x)
   | head x == ' ' || head x == '\t' = tokenize  (drop 1 x)
   | otherwise = error $ "Caractere inválido: " ++ [head x]
 
-prefixOf :: String -> String -> Bool
-prefixOf [] _ = True
-prefixOf _ [] = False
-prefixOf (x:xs) (y:ys) = x == y && prefixOf xs ys
+
 
 -- Precedência dos operadores
-precedencia :: Token -> Int
-precedencia Not = 5
-precedencia And = 4
-precedencia Or = 3
-precedencia Implication = 2
-precedencia Biconditional = 1
-precedencia LeftParen = 0
-precedencia RightParen = 0
+valor :: Token -> Int
+valor Not = 5
+valor And = 4
+valor Or = 3
+valor Implication = 2
+valor Biconditional = 1
+valor LeftParen = 0
+valor RightParen = 0
 
 -- Função para converter expressão infixa para notação pós-fixa (RPN)
 ordenar :: [Token] -> [Token] -> [Token] -> [Token]
@@ -67,7 +64,7 @@ ordenar (RightParen : xs) (LeftParen : ss) o = ordenar xs ss o
 ordenar (RightParen : xs) (s : ss) o = ordenar (RightParen : xs) ss (o ++ [s])
 ordenar (x : xs) [] o = ordenar xs [x] o
 ordenar (x : xs) (s : ss) o
-  | precedencia x > precedencia s = ordenar xs (x : s : ss) o
+  | valor x > valor s = ordenar xs (x : s : ss) o
   | otherwise = ordenar (x : xs) ss (o ++ [s])
 
 -- Classificação de uma expressão como Tautologia, Contradição ou Contingente
