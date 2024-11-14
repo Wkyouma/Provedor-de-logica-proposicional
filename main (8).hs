@@ -1,4 +1,4 @@
-import Data.List (isPrefixOf, nub)
+--Igor Terplak Gutierrez
 --tipos de tokens
 data Token
   = Var Char
@@ -11,34 +11,43 @@ data Token
   | LeftParen
   | RightParen
   deriving (Show, Eq)
+  
+prefixof :: Eq a => [a] -> [a] -> Bool
+prefixof [] _ = True  -- Uma lista vazia é prefixo de qualquer lista
+prefixof _ [] = False -- Uma lista não vazia não pode ser prefixo de uma lista vazia
+prefixof (x:xs) (y:ys) = x == y && prefixof xs ys
 
 -- Função para transformar em token
 tokenize  :: String -> [Token]
 tokenize  [] = []
 tokenize  x
-  | "(" `isPrefixOf` x = LeftParen : tokenize  (drop 1 x)
-  | ")" `isPrefixOf` x = RightParen : tokenize  (drop 1 x)
-  | "v" `isPrefixOf` x || "∨" `isPrefixOf` x = Or : tokenize  (drop 1 x)
-  | "ou" `isPrefixOf` x || "or" `isPrefixOf` x = Or : tokenize  (drop 2 x)
-  | "\\lor" `isPrefixOf` x = Or : tokenize  (drop 4 x)
-  | "^" `isPrefixOf` x || "∧" `isPrefixOf` x = And : tokenize  (drop 1 x)
-  | "e" `isPrefixOf` x || "and" `isPrefixOf` x = And : tokenize  (drop 3 x)
-  | "\\land" `isPrefixOf` x = And : tokenize  (drop 5 x)
-  | "~" `isPrefixOf` x || "¬" `isPrefixOf` x = Not : tokenize  (drop 1 x)
-  | "not" `isPrefixOf` x = Not : tokenize  (drop 3 x)
-  | "\\neg" `isPrefixOf` x = Not : tokenize  (drop 4 x)
-  | "¬" `isPrefixOf` x = Not : tokenize  (drop 1 x)
-  | "->" `isPrefixOf` x || "=>" `isPrefixOf` x = Implication : tokenize  (drop 2 x)
-  | "→" `isPrefixOf` x = Implication : tokenize  (drop 1 x)
-  | "\\to" `isPrefixOf` x = Implication : tokenize  (drop 3 x)
-  | "<->" `isPrefixOf` x || "<=>" `isPrefixOf` x = Biconditional : tokenize  (drop 3 x)
-  | "↔" `isPrefixOf` x = Biconditional : tokenize  (drop 1 x)
-  | "\\iff" `isPrefixOf` x = Biconditional : tokenize  (drop 4 x)
-  | "true" `isPrefixOf` x = Boolean True : tokenize  (drop 4 x)
-  | "false" `isPrefixOf` x = Boolean False : tokenize  (drop 5 x)
+  | "(" `prefixof` x = LeftParen : tokenize  (drop 1 x)
+  | ")" `prefixof` x = RightParen : tokenize  (drop 1 x)
+  | "v" `prefixof` x || "∨" `prefixof` x = Or : tokenize  (drop 1 x)
+  | "ou" `prefixof` x || "or" `prefixof` x = Or : tokenize  (drop 2 x)
+  | "\\lor" `prefixof` x = Or : tokenize  (drop 4 x)
+  | "^" `prefixof` x || "∧" `prefixof` x = And : tokenize  (drop 1 x)
+  | "e" `prefixof` x || "and" `prefixof` x = And : tokenize  (drop 3 x)
+  | "\\land" `prefixof` x = And : tokenize  (drop 5 x)
+  | "~" `prefixof` x || "¬" `prefixof` x = Not : tokenize  (drop 1 x)
+  | "not" `prefixof` x = Not : tokenize  (drop 3 x)
+  | "\\neg" `prefixof` x = Not : tokenize  (drop 4 x)
+  | "¬" `prefixof` x = Not : tokenize  (drop 1 x)
+  | "->" `prefixof` x || "=>" `prefixof` x = Implication : tokenize  (drop 2 x)
+  | "→" `prefixof` x = Implication : tokenize  (drop 1 x)
+  | "\\to" `prefixof` x = Implication : tokenize  (drop 3 x)
+  | "<->" `prefixof` x || "<=>" `prefixof` x = Biconditional : tokenize  (drop 3 x)
+  | "↔" `prefixof` x = Biconditional : tokenize  (drop 1 x)
+  | "\\iff" `prefixof` x = Biconditional : tokenize  (drop 4 x)
+  | "true" `prefixof` x = Boolean True : tokenize  (drop 4 x)
+  | "false" `prefixof` x = Boolean False : tokenize  (drop 5 x)
   | head x `elem` ['A' .. 'Z'] = Var (head x) : tokenize  (drop 1 x)
   | head x == ' ' || head x == '\t' = tokenize  (drop 1 x)
   | otherwise = error $ "Caractere inválido: " ++ [head x]
+  
+  
+  
+  
 
 -- Tipo de dado para representar expressões proposicionais
 data Proposicao
@@ -126,9 +135,17 @@ avaliarExpressao expr =
       combinacoes = sequence (replicate (length vars) [True, False])
   in [evalProposicao (zip vars c) expr | c <- combinacoes]
 
+-- Função para remover elementos duplicados de uma lista
+meuNub :: Eq a => [a] -> [a]
+meuNub [] = []
+meuNub (x:xs)
+  | x `elem` xs = meuNub xs
+  | otherwise   = x : meuNub xs  
+  
+
 -- Função para extrair variáveis de uma Proposicao
 variaveisProp :: Proposicao -> [Char]
-variaveisProp p = nub (vars p)
+variaveisProp p = meuNub (vars p)
   where
     vars (PropVar x) = [x]
     vars (PropBool _) = []
@@ -211,7 +228,6 @@ extrairClausulas :: Proposicao -> [Proposicao]
 extrairClausulas (PropAnd x y) = extrairClausulas x ++ extrairClausulas y
 extrairClausulas clausula = [clausula]
 
--- Exibir as cláusulas de Horn ou informar se não for possível
 exibirClausulasHorn :: Proposicao -> IO ()
 exibirClausulasHorn fnc = 
   let clausulas = extrairClausulas fnc
@@ -219,7 +235,8 @@ exibirClausulasHorn fnc =
   in if length clausulas == length clausulasHorn
      then do
        putStrLn "As cláusulas de Horn resultantes são:"
-       mapM_ print clausulasHorn
+       -- Corrigido aqui, agora usamos putStrLn para exibir as cláusulas em LaTeX
+       mapM_ (putStrLn . toLatex) clausulasHorn  -- Aplica 'toLatex' e imprime cada cláusula
      else
        putStrLn "A expressão não pode ser representada apenas com cláusulas de Horn."
 
@@ -246,14 +263,14 @@ printLaTeX msg expr = do
 main :: IO ()
 main = do
     putStrLn "\n┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
-    putStrLn "┃          📝 Entradas Aceitas             ┃"
+    putStrLn "┃            Entradas Aceitas             ┃"
     putStrLn "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"
     putStrLn ""
-    putStrLn "  🔵  Parênteses:                         "
+    putStrLn "    Parênteses:                         "
     putStrLn "    ➤ (     - Parêntese esquerdo        "
     putStrLn "    ➤ )     - Parêntese direito         "
     putStrLn ""
-    putStrLn "  🔵 Operadores Lógicos:                "
+    putStrLn "   Operadores Lógicos:                "
     putStrLn "    ➤ v, ∨  - Operador OR              "
     putStrLn "    ➤ ou, or, \\lor  - Operador OR     "
     putStrLn "    ➤ ^, ∧  - Operador AND             "
@@ -264,10 +281,10 @@ main = do
     putStrLn "    ➤ <->, <=>, \\iff  - Bicondicional "
     putStrLn "    ➤ ↔     - Bicondicional            "
     putStrLn ""
-    putStrLn "  🔵  Variáveis:                         "
+    putStrLn "     Variáveis:                         "
     putStrLn "    ➤ [A-Z] - Variáveis (ex.: A, B, C, ...)"
     putStrLn ""
-    putStrLn "  ⚠️ Observações:                      "
+    putStrLn "  ⚠  Observações:                      "
     putStrLn "    ➤ Espaços em branco e tabulações são ignorados"
     putStrLn "    ➤ Qualquer outro caractere resultará em erro"
     putStrLn "\nPor favor, insira a expressão lógica:"
@@ -287,3 +304,4 @@ main = do
     printLaTeX "Expressão em FNC" fnc
     printSeparator '=' 100
     exibirClausulasHorn fnc
+
