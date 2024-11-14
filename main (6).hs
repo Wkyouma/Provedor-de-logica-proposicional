@@ -2,7 +2,7 @@ import Data.List (isPrefixOf)
 --tipos de tokens
 data Token
   = Var Char
-  | Booleano Bool
+  | Boolean Bool
   | Not
   | And
   | Or
@@ -34,15 +34,15 @@ tokenize  x
   | "<->" `isPrefixOf` x || "<=>" `isPrefixOf` x = Biconditional : tokenize  (drop 3 x)
   | "↔" `isPrefixOf` x = Biconditional : tokenize  (drop 1 x)
   | "\\iff" `isPrefixOf` x = Biconditional : tokenize  (drop 4 x)
-  | "true" `isPrefixOf` x = Booleano True : tokenize  (drop 4 x)
-  | "false" `isPrefixOf` x = Booleano False : tokenize  (drop 5 x)
+  | "true" `isPrefixOf` x = Boolean True : tokenize  (drop 4 x)
+  | "false" `isPrefixOf` x = Boolean False : tokenize  (drop 5 x)
   | head x `elem` ['A' .. 'Z'] = Var (head x) : tokenize  (drop 1 x)
   | head x == ' ' || head x == '\t' = tokenize  (drop 1 x)
   | otherwise = error $ "Caractere inválido: " ++ [head x]
 
 
 
--- Precedência dos operadores
+-- Ordem dos operadores
 valor :: Token -> Int
 valor Not = 5
 valor And = 4
@@ -58,7 +58,7 @@ ordenar [] [] o = o
 ordenar [] (LeftParen : _) _ = error "Parêntese aberto sem fechamento"
 ordenar [] (s : ss) o = ordenar [] ss (o ++ [s])
 ordenar (Var r : xs) s o = ordenar xs s (o ++ [Var r])
-ordenar (Booleano b : xs) s o = ordenar xs s (o ++ [Booleano b])
+ordenar (Boolean b : xs) s o = ordenar xs s (o ++ [Boolean b])
 ordenar (LeftParen : xs) s o = ordenar xs (LeftParen : s) o
 ordenar (RightParen : xs) (LeftParen : ss) o = ordenar xs ss o
 ordenar (RightParen : xs) (s : ss) o = ordenar (RightParen : xs) ss (o ++ [s])
@@ -99,7 +99,7 @@ evalExpr vars = eval []
         lookupVar var = case lookup var vars of
           Just value -> value
           Nothing -> error $ "Variável não encontrada: " ++ [var]
-    eval stack (Booleano b : xs) = eval (b : stack) xs
+    eval stack (Boolean b : xs) = eval (b : stack) xs
     eval stack (Not : xs) = case stack of
       (s:rest) -> eval (not s : rest) xs
       _ -> error "Pilha insuficiente para operador 'Not'"
@@ -172,7 +172,7 @@ parseRPN = parse []
   where
     parse [result] [] = result
     parse stack (Var v : xs) = parse (PropVar v : stack) xs
-    parse stack (Booleano b : xs) = parse (PropBool b : stack) xs
+    parse stack (Boolean b : xs) = parse (PropBool b : stack) xs
     parse (x : xs) (Not : rest) = parse (PropNot x : xs) rest
     parse (y : x : xs) (And : rest) = parse (PropAnd x y : xs) rest
     parse (y : x : xs) (Or : rest) = parse (PropOr x y : xs) rest
