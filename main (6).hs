@@ -19,12 +19,20 @@ lexer x
   | ")" `prefixOf` x = RightParen : lexer (drop 1 x)
   | "v" `prefixOf` x || "∨" `prefixOf` x = Or : lexer (drop 1 x)
   | "ou" `prefixOf` x || "or" `prefixOf` x = Or : lexer (drop 2 x)
+  | "\\lor" `prefixOf` x = Or : lexer (drop 4 x)
   | "^" `prefixOf` x || "∧" `prefixOf` x = And : lexer (drop 1 x)
   | "e" `prefixOf` x || "and" `prefixOf` x = And : lexer (drop 3 x)
+  | "\\land" `prefixOf` x = And : lexer (drop 5 x)
   | "~" `prefixOf` x || "¬" `prefixOf` x = Not : lexer (drop 1 x)
   | "not" `prefixOf` x = Not : lexer (drop 3 x)
+  | "\\neg" `prefixOf` x = Not : lexer (drop 4 x)
+  | "¬" `prefixOf` x = Not : lexer (drop 1 x)
   | "->" `prefixOf` x || "=>" `prefixOf` x = Implication : lexer (drop 2 x)
+   | "→" `prefixOf` x = Implication : lexer (drop 1 x)
+  | "\\to" `prefixOf` x = Implication : lexer (drop 3 x)
   | "<->" `prefixOf` x || "<=>" `prefixOf` x = Biconditional : lexer (drop 3 x)
+  | "↔" `prefixOf` x = Biconditional : lexer (drop 1 x)
+  | "\\Leftrightaarow" `prefixOf` x = Biconditional : lexer (drop 15 x)
   | "true" `prefixOf` x = Booleano True : lexer (drop 4 x)
   | "false" `prefixOf` x = Booleano False : lexer (drop 5 x)
   | head x `elem` ['A' .. 'Z'] = Var (head x) : lexer (drop 1 x)
@@ -131,6 +139,7 @@ elimImpli (PDisj x y) = PDisj (elimImpli x) (elimImpli y)
 elimImpli (PImpli x y) = PDisj (PNao (elimImpli x)) (elimImpli y)
 elimImpli (PBiCon x y) = PConj (elimImpli (PImpli x y)) (elimImpli (PImpli y x))
 
+
 -- Mover negações para dentro e simplificar dupla negação
 elimNeg :: Prop -> Prop
 elimNeg (PVar x) = PVar x
@@ -141,7 +150,6 @@ elimNeg (PNao (PDisj x y)) = PConj (elimNeg (PNao x)) (elimNeg (PNao y))  -- De 
 elimNeg (PNao x) = PNao (elimNeg x)
 elimNeg (PConj x y) = PConj (elimNeg x) (elimNeg y)
 elimNeg (PDisj x y) = PDisj (elimNeg x) (elimNeg y)
-
 -- Distribuir disjunções sobre conjunções para obter a FNC
 distributivaProp :: Prop -> Prop
 distributivaProp p =
@@ -204,18 +212,22 @@ exibirClausulasHorn fnc =
      else
        putStrLn "A expressão não pode ser representada apenas com cláusulas de Horn."
 
+printSeparator :: Char -> Int -> IO ()
+printSeparator c n = putStrLn (replicate n c)
 
--- Atualização do `main` para automatizar a conversão para `Prop` e FNC
 main :: IO ()
 main = do
-    let str = "P -> Q ^ R"
+    let str = "P \\Leftrightaarow Q"
     let lexado = lexer str
     print $ "Tokens: " ++ show lexado
+    printSeparator '=' 100
     let rpn = ordenar lexado [] []
-    print $ "Notação Pós-Fixa (RPN): " ++ show rpn
-    putStrLn $ "Classificação da expressão: " ++ classificar str
+    print $ "Notacao Pos-Fixa (RPN): " ++ show rpn
+    putStrLn $ "Classificacao da expressao: " ++ classificar str
+    printSeparator '=' 100
     let propExpr = parseRPN rpn
     print $ "Expressao Prop: " ++ show propExpr
     let fnc = converterParaFNC propExpr
     print $ "Expressao em FNC: " ++ show fnc
+    printSeparator '=' 100
     exibirClausulasHorn fnc
