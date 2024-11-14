@@ -174,29 +174,48 @@ parseRPN = parse []
     parse (y : x : xs) (Implication : rest) = parse (PImpli x y : xs) rest
     parse (y : x : xs) (Biconditional : rest) = parse (PBiCon x y : xs) rest
     parse _ _ = error "Expressão inválida para conversão em Prop"
+    
+-- Função para verificar se uma disjunção é uma cláusula de Horn
+ehClausulaHorn :: Prop -> Bool
+ehClausulaHorn (PDisj x y) = numPositivos (PDisj x y) <= 1
+ehClausulaHorn x = True  -- Um único literal é sempre uma cláusula de Horn
+
+-- Contagem de literais positivos em uma expressão
+numPositivos :: Prop -> Int
+numPositivos (PVar _) = 1
+numPositivos (PNao _) = 0
+numPositivos (PDisj x y) = numPositivos x + numPositivos y
+numPositivos _ = 0
+
+-- Separar as cláusulas da FNC
+extrairClausulas :: Prop -> [Prop]
+extrairClausulas (PConj x y) = extrairClausulas x ++ extrairClausulas y
+extrairClausulas clausula = [clausula]
+
+-- Exibir as cláusulas de Horn ou informar se não for possível
+exibirClausulasHorn :: Prop -> IO ()
+exibirClausulasHorn fnc = 
+  let clausulas = extrairClausulas fnc
+      clausulasHorn = filter ehClausulaHorn clausulas
+  in if length clausulas == length clausulasHorn
+     then do
+       putStrLn "As cláusulas de Horn resultantes são:"
+       mapM_ print clausulasHorn
+     else
+       putStrLn "A expressão não pode ser representada apenas com cláusulas de Horn."
+
 
 -- Atualização do `main` para automatizar a conversão para `Prop` e FNC
 main :: IO ()
 main = do
-    -- Expressão a ser analisada
-    let str = "X <-> Y"
-    
-    -- Etapa 1: Tokenização da string
+    let str = "P -> Q ^ R"
     let lexado = lexer str
-    putStrLn $ "Tokens: " ++ show lexado
-    
-    -- Etapa 2: Conversão para notação pós-fixa (RPN) usando o Shunting Yard
+    print $ "Tokens: " ++ show lexado
     let rpn = ordenar lexado [] []
-    putStrLn $ "Notação Pós-Fixa (RPN): " ++ show rpn
-    
-    -- Etapa 3: Classificação da expressão como Tautologia, Contradição ou Contingente
-    let classificacao = classificar str
-    putStrLn $ "Classificação da expressão: " ++ classificacao
-    
-    -- Etapa 4: Converter a notação RPN para uma expressão `Prop`
-    let exprProp = parseRPN rpn
-    putStrLn $ "Expressão Prop: " ++ show exprProp
-    
-    -- Etapa 5: Converter a expressão `Prop` para FNC
-    let exprFNC = converterParaFNC exprProp
-    putStrLn $ "Expressão em FNC: " ++ show exprFNC
+    print $ "Notação Pós-Fixa (RPN): " ++ show rpn
+    putStrLn $ "Classificação da expressão: " ++ classificar str
+    let propExpr = parseRPN rpn
+    print $ "Expressao Prop: " ++ show propExpr
+    let fnc = converterParaFNC propExpr
+    print $ "Expressao em FNC: " ++ show fnc
+    exibirClausulasHorn fnc
